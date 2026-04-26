@@ -1,0 +1,128 @@
+import numpy as np
+!pip install fuzzy scikit-fuzzy
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+distance = ctrl.Antecedent(np.arange(0, 50.1, 0.1), 'distance')
+traffic = ctrl.Antecedent(np.arange(0, 1.001, 0.001), 'traffic')
+wether = ctrl.Antecedent(np.arange(0, 10.1, 0.1), 'wether_severity') 
+cus = ctrl.Antecedent(np.arange(1, 5.01, 0.01), 'cus')
+pun = ctrl.Antecedent(np.arange(0, 1.001, 0.001), 'pun')
+
+de_lever = ctrl.Antecedent(np.arange(0, 1.001, 0.001), 'de_lever')
+
+#dau ra
+money = ctrl.Consequent(np.arange(0, 100.1, 0.1), 'money')
+reward = ctrl.Consequent(np.arange(0, 10.1, 0.1), 'reward')
+
+
+
+# Distance
+distance['short'] = fuzz.trimf(distance.universe, [0, 3, 3])
+distance['medium'] = fuzz.trimf(distance.universe, [2, 8, 8])
+distance['long'] = fuzz.trimf(distance.universe, [6, 20, 20])
+distance['v_long'] = fuzz.trimf(distance.universe, [15, 50, 50])
+
+# Traffic
+traffic['low'] = fuzz.trimf(traffic.universe, [0, 0, 0.3])
+traffic['medium'] = fuzz.trimf(traffic.universe, [0.2, 0.45, 0.7])
+traffic['high'] = fuzz.trimf(traffic.universe, [0.6, 1, 1])
+
+# Delivery Level
+de_lever['low'] = fuzz.trimf(de_lever.universe, [0, 0, 0.3])
+de_lever['medium'] = fuzz.trimf(de_lever.universe, [0.2, 0.45, 0.7]) 
+de_lever['high'] = fuzz.trimf(de_lever.universe, [0.6, 1, 1])
+
+# Weather
+wether['good'] = fuzz.trimf(wether.universe, [0, 0, 4])
+wether['light'] = fuzz.trimf(wether.universe, [0, 5, 10])
+wether['storm'] = fuzz.trimf(wether.universe, [6, 10, 10])
+
+# Customer Rating
+cus['poor'] = fuzz.trimf(cus.universe, [1, 1, 2.5])
+cus['average'] = fuzz.trimf(cus.universe, [2, 3, 4])
+cus['good'] = fuzz.trimf(cus.universe, [3.5, 5, 5])
+
+# Punctuality
+pun['late'] = fuzz.trimf(pun.universe, [0, 0, 0.5])
+pun['on time'] = fuzz.trimf(pun.universe, [0.4, 0.6, 0.8])
+pun['early'] = fuzz.trimf(pun.universe, [0.7, 1, 1])
+
+# Money (Output)
+money['low'] = fuzz.trimf(money.universe, [0, 0, 30])
+money['medium'] = fuzz.trimf(money.universe, [20, 50, 80])
+money['high'] = fuzz.trimf(money.universe, [50, 70, 90])
+money['v_high'] = fuzz.trimf(money.universe, [80, 100, 100])  
+
+# Reward (Output)
+reward['none'] = fuzz.trimf(reward.universe, [0, 0, 3])
+reward['few'] = fuzz.trimf(reward.universe, [2, 5, 8])
+reward['moderate'] = fuzz.trimf(reward.universe, [5, 7, 9])
+reward['high'] = fuzz.trimf(reward.universe, [8, 10, 10]) 
+
+
+
+# Rules cho ma ni
+rules_money = [
+    ctrl.Rule(distance['short'] & traffic['low'] & de_lever['low'], money['low']),
+    ctrl.Rule(distance['short'] & traffic['medium'] & de_lever['high'], money['medium']),
+    ctrl.Rule(distance['medium'] & traffic['high'] & de_lever['high'], money['high']),
+    ctrl.Rule(distance['long'] & traffic['medium'] & wether['good'], money['medium']),
+    ctrl.Rule(distance['v_long'] & traffic['high'] & wether['storm'], money['v_high']),
+    ctrl.Rule(distance['v_long'] & traffic['high'] & de_lever['high'], money['v_high']),
+    ctrl.Rule(distance['medium'] & traffic['low'] & de_lever['low'], money['medium']),
+    ctrl.Rule(distance['short'] & traffic['high'] & wether['storm'], money['high']),
+    ctrl.Rule(distance['v_long'] & wether['storm'], money['v_high']),
+    ctrl.Rule(distance['medium'] & traffic['medium'] & wether['light'], money['medium'])
+]
+
+# Rules thuong
+rules_reward = [
+
+    ctrl.Rule(cus['good']&pun['on time'],reward['high']),
+    ctrl.Rule(cus['average']&pun['on time'],reward['moderate']),
+    ctrl.Rule(cus['poor'] & pun['late'],reward['none']),
+    ctrl.Rule(distance['long']&traffic['high']&pun['on time'],reward['high']),
+    ctrl.Rule(distance['medium']&traffic['medium']&cus['good'],reward['moderate']),
+    ctrl.Rule(cus['poor']&pun['late'],reward['none']), # Duplicate of rule13
+    ctrl.Rule(distance['v_long']&wether['storm']&cus['good'],reward['high']),
+    ctrl.Rule(distance['short'] & cus['average'] & pun['on time'],reward['few']),
+    ctrl.Rule(distance['long']&traffic['high']&pun['late'],reward['few']),
+    ctrl.Rule(distance['medium'] & cus['good'] & wether['light'],reward['moderate'])
+]
+
+
+money_ctrl = ctrl.ControlSystem(rules_money)
+sim_money = ctrl.ControlSystemSimulation(money_ctrl)
+
+reward_ctrl = ctrl.ControlSystem(rules_reward)
+sim_reward = ctrl.ControlSystemSimulation(reward_ctrl)
+
+
+# Giả sử 1 đơn hàng cụ thể
+sim_money.input['distance'] = 5.0
+sim_money.input['traffic'] = 0.8
+sim_money.input['wether_severity'] = 9.9
+sim_money.input['de_lever'] = 0.99
+sim_money.compute()
+
+sim_reward.input['distance'] = 25.0
+sim_reward.input['traffic'] = 0.8
+sim_reward.input['wether_severity'] = 9.0
+sim_reward.input['cus'] = 4.5
+sim_reward.input['pun'] = 0.7
+sim_reward.compute()
+
+# In kết quả
+print(f"--- KẾT QUẢ ---")
+print(f"Số tiền khách phải trả: {sim_money.output['money']:.2f}")
+print(f"Số tiền thưởng tài xế: {sim_reward.output['reward']:.2f}")
+
+distance.view()
+traffic.view()
+de_lever.view()
+wether.view()
+cus.view()
+pun.view()
+money.view()
+reward.view()
