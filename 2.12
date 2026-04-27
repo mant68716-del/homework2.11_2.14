@@ -1,0 +1,79 @@
+!pip install fuzzy scikit-fuzzy
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+#dau vao Antecedent
+uy_tin = ctrl.Antecedent(np.arange(0, 5.1, 0.1), 'uy_tin')
+khoi_luong_ban = ctrl.Antecedent(np.arange(0, 1001, 1), 'khoi_luong')
+bien_loi_nhuan = ctrl.Antecedent(np.arange(0, 101, 1), 'loi_nhuan')
+mua_vu = ctrl.Antecedent(np.arange(0, 11, 1), 'mua_vu')
+doi_thu = ctrl.Antecedent(np.arange(0, 101, 1), 'doi_thu')
+
+#dau ra Consequent
+chiet_khau = ctrl.Consequent(np.arange(0, 70.1, 0.1), 'chiet_khau')
+
+
+uy_tin['thap'] = fuzz.trimf(uy_tin.universe, [0, 0, 4.0])
+uy_tin['trung_binh'] = fuzz.trimf(uy_tin.universe, [4.0, 4.2, 4.5])
+uy_tin['cao'] = fuzz.trimf(uy_tin.universe, [4.5, 5.0, 5.0])
+
+khoi_luong_ban['thap'] = fuzz.trimf(khoi_luong_ban.universe, [0, 0, 400])
+khoi_luong_ban['trung_binh'] = fuzz.trimf(khoi_luong_ban.universe, [300, 500, 700])
+khoi_luong_ban['cao'] = fuzz.trimf(khoi_luong_ban.universe, [600, 1000, 1000])
+
+bien_loi_nhuan['thap'] = fuzz.trimf(bien_loi_nhuan.universe, [0, 0, 30])
+bien_loi_nhuan['trung_binh'] = fuzz.trimf(bien_loi_nhuan.universe, [20, 50, 70])
+bien_loi_nhuan['cao'] = fuzz.trimf(bien_loi_nhuan.universe, [60, 100, 100])
+
+mua_vu['none'] = fuzz.trimf(mua_vu.universe, [0, 0, 4])
+mua_vu['trung_binh'] = fuzz.trimf(mua_vu.universe, [3, 5, 7])
+mua_vu['cao'] = fuzz.trimf(mua_vu.universe, [6, 10, 10])
+
+
+doi_thu['thap'] = fuzz.trimf(doi_thu.universe, [0, 0, 30])
+doi_thu['trung_binh'] = fuzz.trimf(doi_thu.universe, [20, 50, 70])
+doi_thu['cao'] = fuzz.trimf(doi_thu.universe, [60, 100, 100])
+
+
+chiet_khau['rat_thap'] = fuzz.trimf(chiet_khau.universe, [0, 0, 5])
+chiet_khau['thap'] = fuzz.trimf(chiet_khau.universe, [5, 7.5, 10])
+chiet_khau['trung_binh'] = fuzz.trimf(chiet_khau.universe, [0, 35, 70])
+chiet_khau['cao'] = fuzz.trimf(chiet_khau.universe, [20, 40, 60])
+chiet_khau['rat_cao'] = fuzz.trimf(chiet_khau.universe, [40, 70, 70])
+
+
+
+rules = [
+    ctrl.Rule(uy_tin['cao'] & khoi_luong_ban['cao'] & bien_loi_nhuan['cao'], chiet_khau['rat_thap']),
+    ctrl.Rule(uy_tin['thap'] & khoi_luong_ban['thap'] & bien_loi_nhuan['cao'], chiet_khau['cao']),
+    ctrl.Rule(mua_vu['cao'], chiet_khau['rat_cao']),
+    ctrl.Rule(uy_tin['thap'] & mua_vu['none'] , chiet_khau['trung_binh']),
+    ctrl.Rule(bien_loi_nhuan['cao'] & mua_vu['cao'], chiet_khau['trung_binh']),
+    ctrl.Rule(doi_thu['cao'] & mua_vu['trung_binh'], chiet_khau['cao']),
+    ctrl.Rule(khoi_luong_ban['thap'] & bien_loi_nhuan['thap'], chiet_khau['cao'])
+]
+
+
+discount_ctrl = ctrl.ControlSystem(rules)
+discount_sim = ctrl.ControlSystemSimulation(discount_ctrl)
+
+discount_sim.input['uy_tin'] = 4.3
+discount_sim.input['khoi_luong'] = 450
+discount_sim.input['loi_nhuan'] = 30
+discount_sim.input['mua_vu'] = 7
+discount_sim.input['doi_thu'] = 80
+
+
+discount_sim.compute()
+
+
+print(f"--- KẾT QUẢ PHÂN TÍCH LOGIC MỜ ---")
+print(f"Mức chiết khấu đề xuất: {discount_sim.output['chiet_khau']:.2f}%")
+
+uy_tin.view(sim=discount_sim)
+khoi_luong_ban.view(sim=discount_sim)
+bien_loi_nhuan.view(sim=discount_sim)
+mua_vu.view(sim=discount_sim)
+doi_thu.view(sim=discount_sim)
+chiet_khau.view(sim=discount_sim)
