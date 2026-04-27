@@ -46,14 +46,9 @@ mo_phong.input['khan_cap'] = 5
 mo_phong.input['tai_trong'] = 2
 mo_phong.input['giao_thong'] = 5
 mo_phong.input['loi_nhuan'] = 5
-
-# Tính toán kết quả giải mờ
+ 
 mo_phong.compute()
-
-# --- 6. XUẤT KẾT QUẢ TIẾNG VIỆT ---
-print("="*30)
-print("KẾT QUẢ PHÂN TÍCH LOGIC MỜ")
-print("="*30)
+ 
 diem_ket_hop = mo_phong.output['ket_hop']
 diem_uu_tien = mo_phong.output['uu_tien']
 
