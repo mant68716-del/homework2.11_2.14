@@ -1,0 +1,64 @@
+!pip install fuzzy scikit-fuzzy
+import numpy as np
+import skfuzzy as fuzz
+from skfuzzy import control as ctrl
+
+# dau vao Antecedent
+demand = ctrl.Antecedent(np.arange(0, 11, 1), 'demand')
+pressure = ctrl.Antecedent(np.arange(0, 11, 1), 'pressure')   
+reputation = ctrl.Antecedent(np.arange(0, 5.1, 0.1), 'reputation') 
+margin = ctrl.Antecedent(np.arange(0, 11, 1), 'margin')       
+seasonal = ctrl.Antecedent(np.arange(0, 11, 1), 'seasonal')   
+
+#dau ra Consequent
+discount = ctrl.Consequent(np.arange(0, 71.1, 1.1), 'discount')   
+
+
+reputation['low'] = fuzz.trimf(reputation.universe, [0, 0, 4.0])
+reputation['medium'] = fuzz.trimf(reputation.universe, [4.0, 4.2, 4.5])
+reputation['high'] = fuzz.trimf(reputation.universe, [4.5, 5.0, 5.0])
+
+for var in [demand, pressure, margin, seasonal]:
+    var['low'] = fuzz.trimf(var.universe, [0, 0, 2])
+    var['medium'] = fuzz.trimf(var.universe, [2, 5, 8])
+    var['high'] = fuzz.trimf(var.universe, [7, 10, 10])
+
+discount['very_low'] = fuzz.trimf(discount.universe, [0, 0, 5])
+discount['low'] = fuzz.trimf(discount.universe, [5, 7.5, 10])
+discount['medium'] = fuzz.trimf(discount.universe, [10, 25, 25])
+discount['high'] = fuzz.trimf(discount.universe, [25, 50, 50])
+discount['very_high'] = fuzz.trimf(discount.universe, [40, 70, 70])
+
+#luat
+rule1 = ctrl.Rule(demand['high'] & pressure['low'] & margin['low'], discount['very_low'])
+rule2 = ctrl.Rule(demand['low'] & pressure['high'] & margin['high'], discount['high'])
+rule3 = ctrl.Rule(reputation['high'] & margin['medium'] & seasonal['high'], discount['medium'])
+rule4 = ctrl.Rule(pressure['high'] & seasonal['high'] & margin['high'], discount['very_high'])
+rule5 = ctrl.Rule(reputation['low'] & demand['medium'] & margin['low'], discount['medium'])
+rule6 = ctrl.Rule(demand['high'] & seasonal['low'] & pressure['low'], discount['very_low'])
+rule7 = ctrl.Rule(margin['high'] & pressure['medium'] & seasonal['medium'], discount['medium'])
+rule8 = ctrl.Rule(reputation['medium'] & seasonal['high'] & pressure['medium'], discount['medium'])
+
+
+
+discount_ctrl = ctrl.ControlSystem([rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8])
+discount_sim = ctrl.ControlSystemSimulation(discount_ctrl)
+
+
+discount_sim.input['demand'] = 9
+discount_sim.input['pressure'] = 5
+discount_sim.input['reputation'] = 4.2
+discount_sim.input['margin'] = 9
+discount_sim.input['seasonal'] = 8
+
+discount_sim.compute()
+
+
+print(f"Mức chiết khấu/giảm giá đề xuất: {discount_sim.output['discount']:.2f}%")
+
+demand.view(sim=discount_sim)
+pressure.view(sim=discount_sim)
+reputation.view(sim=discount_sim)
+margin.view(sim=discount_sim)
+seasonal.view(sim=discount_sim)
+discount.view(sim=discount_sim)
